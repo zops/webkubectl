@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-kubectl
+  namespace: default
+  labels:
+    app: web-kubectl
+spec:
+  minReadySeconds: 10
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: web-kubectl
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: web-kubectl
+    spec:
+      containers:
+      - name: web-kubectl
+        image: kubeoperator/webkubectl
+        env:
+        - name: SESSION_STORAGE_SIZE
+          value: 15M
+        - name: WELCOME_BANNER
+          value: "支持 kubectl，kubectx，kubens，k9s，helm 等命令！"
+        ports:
+        - containerPort: 8080
+        securityContext:
+          privileged: true
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-kubectl
+  namespace: default
+  labels:
+    application: web-kubectl
+spec:
+  ports:
+  - name: web-kubectl
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: web-kubectl
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  labels:
+    app: web-kubectl
+  name: web-kubectl
+  namespace: default
+spec:
+  rules:
+  - host: kubectl.example.com
+    http:
+      paths:
+      - backend:
+          serviceName: web-kubectl
+          servicePort: 8080
+        path: /
+  tls:
+  - hosts:
+    - kubectl.example.com
+    secretName: xxxx-tls
